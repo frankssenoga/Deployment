@@ -16,7 +16,7 @@ scaler = joblib.load('scaler.pkl')
 # List of features used in the model (from your notebook)
 feature_names = [
     # Add your actual feature names here — extracted from X_train.columns
-    'cpu_utilization', 'memory_used', 'vdaerror', 'hdaerror',  # Example only
+    'cpu_utilization', 'memory_used', 'vdaerror', 'hdaerror', 
     # Add the full list of columns as in df_cleaned.drop('Status', axis=1)
 ]
 
