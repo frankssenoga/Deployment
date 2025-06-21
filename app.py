@@ -8,7 +8,7 @@ import tensorflow as tf
 app = Flask(__name__)
 
 # Load the trained model
-model = tf.keras.models.load_model('ffnn_model.h5')  # or .pkl if using joblib for scikit models
+model = tf.keras.models.load_model('ffnn_model.h5')
 
 # Load the scaler
 scaler = joblib.load('scaler.pkl')
