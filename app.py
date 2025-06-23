@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import joblib
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # Initialize Flask app
 
 app = Flask(__name__)
