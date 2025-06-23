@@ -3,9 +3,8 @@ import numpy as np
 import pandas as pd
 import joblib
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 # Initialize Flask app
+
 app = Flask(__name__)
 
 # Load the trained model and scaler
