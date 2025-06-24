@@ -12,8 +12,8 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"     # 0=all, 1=info, 2=warning, 3=error
 # ────────────────────────────────────────────────────────────
 # 2. Load model and scaler
 # ────────────────────────────────────────────────────────────
-MODEL_PATH  = "ffnn_model_fn.pkl"   # <-- make sure this file is in the same folder
-SCALER_PATH = "scaler_fn.pkl"       # <-- ditto (rename if you kept scaler_n.pkl)
+MODEL_PATH  = "ffnn_model_n.pkl"   # <-- make sure this file is in the same folder
+SCALER_PATH = "scaler_n.pkl"       # <-- ditto (rename if you kept scaler_n.pkl)
 
 model  = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
