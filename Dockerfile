@@ -1,29 +1,46 @@
-# Use an official lightweight Python image
-FROM python:3.10-slim
+# ──────────────────────────────────────────────
+# 1. Base image
+# ──────────────────────────────────────────────
+# Use the latest slim Python image (tiny footprint, Debian-based)
+FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# ──────────────────────────────────────────────
+# 2. Environment settings
+# ──────────────────────────────────────────────
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    python3-dev \
+# ──────────────────────────────────────────────
+# 3. OS-level deps (minimal build tooling)
+# ──────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements.txt and install dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# ──────────────────────────────────────────────
+# 4. Working directory
+# ──────────────────────────────────────────────
+WORKDIR /app
 
-# Copy the rest of the app files
+# ──────────────────────────────────────────────
+# 5. Python deps
+# ──────────────────────────────────────────────
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# ──────────────────────────────────────────────
+# 6. App source + model/scaler
+# ──────────────────────────────────────────────
 COPY . .
 
-# Expose the port the app runs on
+# ──────────────────────────────────────────────
+# 7. Expose (Render sets $PORT at runtime, but this aids local tests)
+# ──────────────────────────────────────────────
 EXPOSE 5000
 
-# Run the Flask app
-CMD ["python", "app.py"]
+# ──────────────────────────────────────────────
+# 8. Start the service
+# ──────────────────────────────────────────────
+# Render injects $PORT; locally defaults to 5000
+CMD ["bash", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000}"]
