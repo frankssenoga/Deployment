@@ -4,48 +4,70 @@ import numpy as np
 import pandas as pd
 import joblib
 
-# Disable TensorFlow GPU initialization if TensorFlow is installed (optional)
+
+# Tell any installed TensorFlow to stay on CPU and keep logs quiet
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"     # 0=all, 1=info, 2=warning, 3=error
 
-# Initialize Flask app
-app = Flask(__name__)
+# ────────────────────────────────────────────────────────────
+# 2. Load model and scaler
+# ────────────────────────────────────────────────────────────
+MODEL_PATH  = "ffnn_model_fn.pkl"   # <-- make sure this file is in the same folder
+SCALER_PATH = "scaler_fn.pkl"       # <-- ditto (rename if you kept scaler_n.pkl)
 
-# Load the trained model and scaler
-model = joblib.load("ffnn_model.pkl")
-scaler = joblib.load("scaler.pkl")
+model  = joblib.load(MODEL_PATH)
+scaler = joblib.load(SCALER_PATH)
 
-# Define the feature names used during training
+# ────────────────────────────────────────────────────────────
+# 3. Feature list (exactly the 17 columns used in training)
+# ────────────────────────────────────────────────────────────
 feature_names = [
-    'cpu_utilization', 'memory_used', 'vdaerror', 'hdaerror'
-    # ➕ Add your actual features from training here
+    "rxbytes_rate",    "txbytes_rate",
+    "timecpu",         "timesys",        "timeusr",
+    "state",           "cputime",
+    "memminor_fault",  "memunused",      "memlast_update",
+    "memrss",
+    "vdard_req_rate",  "vdard_bytes_rate",
+    "vdawr_reqs_rate", "vdawr_bytes_rate",
+    "hdard_req_rate",  "hdard_bytes_rate"
 ]
 
-@app.route('/predict', methods=['POST'])
+# ────────────────────────────────────────────────────────────
+# 4. Flask application
+# ────────────────────────────────────────────────────────────
+app = Flask(__name__)
+
+@app.route("/predict", methods=["POST"])
 def predict():
+    """
+    Expects a JSON body containing every feature in `feature_names`.
+    Returns the binary class and the raw model score/probability.
+    """
     try:
-        # Parse JSON input
-        input_data = request.get_json()
+        payload = request.get_json(force=True)
 
-        # Convert input to DataFrame
-        input_df = pd.DataFrame([input_data], columns=feature_names)
+        # Put payload into a single-row DataFrame in the correct order
+        X = pd.DataFrame([payload], columns=feature_names)
 
-        # Scale input
-        input_scaled = scaler.transform(input_df)
-
-        # Predict using model
-        prediction = model.predict(input_scaled)
-        predicted_class = int(np.round(prediction[0]))
+        # Scale → Predict
+        X_scaled      = scaler.transform(X)
+        proba         = float(model.predict(X_scaled)[0])      # raw sigmoid output
+        predicted_cls = int(round(proba))                      # 0 or 1
 
         return jsonify({
-            'prediction': predicted_class,
-            'raw_output': float(prediction[0])
+            "prediction": predicted_cls,
+            "probability": proba
         })
 
-    except Exception as e:
-        return jsonify({'error': str(e)})
+    except Exception as exc:
+        # Return the error message so you can debug client-side
+        return jsonify({"error": str(exc)}), 400
 
-# Run app using dynamic PORT (for Render or Heroku)
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Render sets PORT; fallback to 5000 locally
-    app.run(host='0.0.0.0', port=port)
 
+# ────────────────────────────────────────────────────────────
+# 5. Local / Render entry-point
+# ────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    # Render (and Heroku) inject the desired port via $PORT
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
