@@ -1,6 +1,5 @@
 Flask
 gunicorn
-tensorflow-cpu
 pandas
 numpy
 scipy
