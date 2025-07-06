@@ -1,73 +1,98 @@
+# app.py
 import os
-from flask import Flask, request, jsonify
-import numpy as np
-import pandas as pd
+import re
+from flask import Flask, request, render_template, jsonify, abort
 import joblib
+import numpy as np
 
+app = Flask(__name__)
 
-# Tell any installed TensorFlow to stay on CPU and keep logs quiet
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"     # 0=all, 1=info, 2=warning, 3=error
-
-# ────────────────────────────────────────────────────────────
-# 2. Load model and scaler
-# ────────────────────────────────────────────────────────────
-MODEL_PATH  = "ffnn_model_n.pkl"   # <-- make sure this file is in the same folder
-SCALER_PATH = "scaler_n.pkl"       # <-- ditto (rename if you kept scaler_n.pkl)
+# ────────────────────────────
+# Load model & scaler once
+# ────────────────────────────
+MODEL_PATH  = "ffnn_model_n.pkl"
+SCALER_PATH = "scaler_n.pkl"
 
 model  = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
 
-# ────────────────────────────────────────────────────────────
-# 3. Feature list (exactly the 17 columns used in training)
-# ────────────────────────────────────────────────────────────
-feature_names = [
-    "rxbytes_rate",    "txbytes_rate",
-    "timecpu",         "timesys",        "timeusr",
-    "state",           "cputime",
-    "memminor_fault",  "memunused",      "memlast_update",
-    "memrss",
-    "vdard_req_rate",  "vdard_bytes_rate",
-    "vdawr_reqs_rate", "vdawr_bytes_rate",
-    "hdard_req_rate",  "hdard_bytes_rate"
+# ────────────────────────────
+# Feature list (MUST match training order)
+# ────────────────────────────
+FEATURES = [
+    "rxbytes_rate",  "txbytes_rate",  "timecpu",      "timesys",      "timeusr",
+    "state",         "cputime",       "memminor_fault","memunused",    "memlast_update",
+    "memrss",        "vdard_req_rate","vdard_bytes_rate","vdawr_reqs_rate",
+    "vdawr_bytes_rate","hdard_req_rate","hdard_bytes_rate"
 ]
 
-# ────────────────────────────────────────────────────────────
-# 4. Flask application
-# ────────────────────────────────────────────────────────────
-app = Flask(__name__)
+# ────────────────────────────
+# Helper: robust numeric cleaner
+# ────────────────────────────
+num_re = re.compile(r"[^\d\-.]")       # keep 0‑9, dot, minus
+def to_float(raw: str) -> float:
+    cleaned = num_re.sub("", raw or "")
+    if cleaned in ("", "-", ".", "-."):
+        return 0.0
+    return float(cleaned)
+
+# ────────────────────────────
+# Routes
+# ────────────────────────────
+@app.route("/", methods=["GET"])
+def home():
+    # blank defaults so the form loads empty
+    empty_vals = {f: "" for f in FEATURES}
+    return render_template("index.html", values=empty_vals, prediction=None)
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
     """
-    Expects a JSON body containing every feature in `feature_names`.
-    Returns the binary class and the raw model score/probability.
+    Accepts:
+      • a browser form (application/x-www-form-urlencoded)
+      • or JSON: {"rxbytes_rate": 123, ...}
+    Returns:
+      • HTML (if form)   — renders index.html with prediction
+      • JSON (if JSON)   — {"prediction": 1, "probability": 0.987}
     """
+    # decide if JSON or form
+    is_json = request.is_json
+
+    incoming = request.get_json(force=True) if is_json else request.form
+
+    # make sure all features are present
+    if not all(k in incoming for k in FEATURES):
+        abort(400, description="Missing one or more required features.")
+
+    # convert to float list in correct order
     try:
-        payload = request.get_json(force=True)
+        vals = [to_float(incoming[k]) for k in FEATURES]
+    except ValueError as err:
+        abort(400, description=f"Bad numeric value → {err}")
 
-        # Put payload into a single-row DataFrame in the correct order
-        X = pd.DataFrame([payload], columns=feature_names)
+    x_scaled = scaler.transform([vals])
+    proba    = model.predict_proba(x_scaled)[0][1]
+    y_pred   = int(proba >= 0.5)
 
-        # Scale → Predict
-        X_scaled      = scaler.transform(X)
-        proba         = float(model.predict(X_scaled)[0])      # raw sigmoid output
-        predicted_cls = int(round(proba))                      # 0 or 1
-
+    if is_json:   # return JSON
         return jsonify({
-            "prediction": predicted_cls,
-            "probability": proba
+            "prediction": y_pred,
+            "probability": round(float(proba), 6)
         })
 
-    except Exception as exc:
-        # Return the error message so you can debug client-side
-        return jsonify({"error": str(exc)}), 400
+    # else render HTML
+    display_vals = {k: incoming[k] for k in FEATURES}
+    label = "🚨 Virtual Machine Under Attack" if y_pred else "✅ Virtual Machine Normal"
+    return render_template(
+        "index.html",
+        values=display_vals,
+        prediction=f"{label} (Prob={proba:.4f})"
+    )
 
-
-# ────────────────────────────────────────────────────────────
-# 5. Local / Render entry-point
-# ────────────────────────────────────────────────────────────
+# ────────────────────────────
+# Entry‑point
+# ────────────────────────────
 if __name__ == "__main__":
-    # Render (and Heroku) inject the desired port via $PORT
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
