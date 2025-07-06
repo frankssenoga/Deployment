@@ -1,46 +1,30 @@
-# ──────────────────────────────────────────────
-# 1. Base image
-# ──────────────────────────────────────────────
-# Use the latest slim Python image (tiny footprint, Debian-based)
+# ───────────────────────────────────────────────
+#  Dockerfile  for “Virtual Machine Attack Predictor”
+# ───────────────────────────────────────────────
 FROM python:3.11-slim
 
-# ──────────────────────────────────────────────
-# 2. Environment settings
-# ──────────────────────────────────────────────
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+# Prevent Python from writing .pyc files and buffering stdout
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PORT=5000
 
-# ──────────────────────────────────────────────
-# 3. OS-level deps (minimal build tooling)
-# ──────────────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# ──────────────────────────────────────────────
-# 4. Working directory
-# ──────────────────────────────────────────────
+# Workdir inside the container
 WORKDIR /app
 
-# ──────────────────────────────────────────────
-# 5. Python deps
-# ──────────────────────────────────────────────
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Install system packages (optional: remove if slim image works without)
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     build-essential && \
+#     rm -rf /var/lib/apt/lists/*
 
-# ──────────────────────────────────────────────
-# 6. App source + model/scaler
-# ──────────────────────────────────────────────
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy entire project (app.py, templates/, static/, *.pkl, etc.)
 COPY . .
 
-# ──────────────────────────────────────────────
-# 7. Expose (Render sets $PORT at runtime, but this aids local tests)
-# ──────────────────────────────────────────────
+# Expose port for local Docker runs (Render injects $PORT automatically)
 EXPOSE 5000
 
-# ──────────────────────────────────────────────
-# 8. Start the service
-# ──────────────────────────────────────────────
-# Render injects $PORT; locally defaults to 5000
-CMD ["bash", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-5000}"]
+# Start the service
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:${PORT}"]
