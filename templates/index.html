@@ -67,6 +67,12 @@ input {
     display:flex; justify-content:center;
     gap:2cm; margin-top:50px; width:100%;
   }
+   .explanation {
+    background-color: #222;
+    color: #eee;
+    padding: 15px;
+    border-radius: 8px;
+}
 </style>
 
 <body>
@@ -139,6 +145,16 @@ input {
     {% if prediction %}
      <h3 style="text-align:center; color: rebeccapurple;">Prediction: {{ prediction }}</h3>
     {% endif %}
+  {% if top_features %}
+<div class="explanation" style="margin-top: 20px;">
+    <h4>🔍 Top Contributing Features</h4>
+    <ul>
+        {% for feature, value in top_features %}
+            <li><b>{{ feature }}</b>: {{ '%.4f'|format(value) }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
   </div>
 
 <script>
