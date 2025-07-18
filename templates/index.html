@@ -145,15 +145,15 @@ input {
     {% if prediction %}
      <h3 style="text-align:center; color: rebeccapurple;">Prediction: {{ prediction }}</h3>
     {% endif %}
-  {% if top_features %}
-<div class="explanation" style="margin-top: 20px;">
-    <h4>🔍 Top Contributing Features</h4>
+{% if top_features %}
+  <div style="margin-top: 20px;">
+    <h3>🔍 Top Contributing Features</h3>
     <ul>
-        {% for feature, value in top_features %}
-            <li><b>{{ feature }}</b>: {{ '%.4f'|format(value) }}</li>
-        {% endfor %}
+      {% for feature, value in top_features %}
+        <li><strong>{{ feature }}:</strong> {{ "%.4f"|format(value) }}</li>
+      {% endfor %}
     </ul>
-</div>
+  </div>
 {% endif %}
   </div>
 
