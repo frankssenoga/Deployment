@@ -4,6 +4,7 @@ import re
 from flask import Flask, request, render_template, jsonify, abort
 import joblib
 import numpy as np
+import shap  # ⬅️ NEW: Import SHAP
 
 app = Flask(__name__)
 
@@ -45,7 +46,6 @@ def home():
     empty_vals = {f: "" for f in FEATURES}
     return render_template("index.html", values=empty_vals, prediction=None)
 
-
 @app.route("/predict", methods=["POST"])
 def predict():
     """
@@ -56,16 +56,13 @@ def predict():
       • HTML (if form)   — renders index.html with prediction
       • JSON (if JSON)   — {"prediction": 1, "probability": 0.987}
     """
-    # decide if JSON or form
     is_json = request.is_json
-
     incoming = request.get_json(force=True) if is_json else request.form
 
-    # make sure all features are present
+    # Validate input
     if not all(k in incoming for k in FEATURES):
         abort(400, description="Missing one or more required features.")
 
-    # convert to float list in correct order
     try:
         vals = [to_float(incoming[k]) for k in FEATURES]
     except ValueError as err:
@@ -81,13 +78,23 @@ def predict():
             "probability": round(float(proba), 6)
         })
 
-    # else render HTML
+    # ⬇️ SHAP explainability part
+    try:
+        explainer = shap.KernelExplainer(lambda x: model.predict_proba(x)[:,1], shap.kmeans(x_scaled, 1))
+        shap_values = explainer.shap_values(x_scaled)
+        contributions = list(zip(FEATURES, shap_values[0]))
+        top_features = sorted(contributions, key=lambda x: abs(x[1]), reverse=True)[:5]
+    except Exception as e:
+        top_features = [("Explainability Error", str(e))]
+
     display_vals = {k: incoming[k] for k in FEATURES}
     label = "🚨 Virtual Machine Under Attack" if y_pred else "✅ Virtual Machine Normal"
+
     return render_template(
         "index.html",
         values=display_vals,
-        prediction=f"{label} (Prob={proba:.4f})"
+        prediction=f"{label} (Prob={proba:.4f})",
+        top_features=top_features
     )
 
 # ────────────────────────────
