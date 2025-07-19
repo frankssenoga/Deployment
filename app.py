@@ -65,7 +65,7 @@ def predict():
     # SHAP Explainability Block
     # ───────────────────────────
     try:
-        explainer = shap.Explainer(model.predict_proba, masker="auto")
+        explainer = shap.Explainer(model.predict_proba, x_scaled)
         shap_values = explainer(x_scaled)
         feature_contributions = shap_values.values[0, :, 1]  # Contributions for class 1
         contributions = list(zip(FEATURES, feature_contributions))
