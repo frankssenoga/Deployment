@@ -1,11 +1,9 @@
-# app.py
 import os
 import re
 from flask import Flask, request, render_template, jsonify, abort
 import joblib
 import numpy as np
-import shap  # ⬅️ NEW: Import SHAP
-import pandas as pd
+import shap
 
 app = Flask(__name__)
 
@@ -31,7 +29,7 @@ FEATURES = [
 # ────────────────────────────
 # Helper: robust numeric cleaner
 # ────────────────────────────
-num_re = re.compile(r"[^\d\-.]")       # keep 0‑9, dot, minus
+num_re = re.compile(r"[^\d\-.]")  # keep digits, dot, minus
 def to_float(raw: str) -> float:
     cleaned = num_re.sub("", raw or "")
     if cleaned in ("", "-", ".", "-."):
@@ -43,24 +41,14 @@ def to_float(raw: str) -> float:
 # ────────────────────────────
 @app.route("/", methods=["GET"])
 def home():
-    # blank defaults so the form loads empty
     empty_vals = {f: "" for f in FEATURES}
-    return render_template("index.html", values=empty_vals, prediction=None)
+    return render_template("index.html", values=empty_vals, prediction=None, top_features=[])
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """
-    Accepts:
-      • a browser form (application/x-www-form-urlencoded)
-      • or JSON: {"rxbytes_rate": 123, ...}
-    Returns:
-      • HTML (if form)   — renders index.html with prediction
-      • JSON (if JSON)   — {"prediction": 1, "probability": 0.987}
-    """
     is_json = request.is_json
     incoming = request.get_json(force=True) if is_json else request.form
 
-    # Validate input
     if not all(k in incoming for k in FEATURES):
         abort(400, description="Missing one or more required features.")
 
@@ -69,39 +57,29 @@ def predict():
     except ValueError as err:
         abort(400, description=f"Bad numeric value → {err}")
 
-    input_df = pd.DataFrame([vals], columns=FEATURES)
-    x_scaled = scaler.transform(input_df)
-    proba    = model.predict_proba(x_scaled)[0][1]
-    y_pred   = int(proba >= 0.5)
+    x_scaled = scaler.transform([vals])
+    proba = model.predict_proba(x_scaled)[0][1]
+    y_pred = int(proba >= 0.5)
 
-    if is_json:   # return JSON
-        return jsonify({
-            "prediction": y_pred,
-            "probability": round(float(proba), 6)
-        })
-
-    # ⬇️ SHAP explainability part
+    # SHAP explainability
     try:
-        background = shap.kmeans(x_scaled, 1)
-        explainer = shap.Explainer(lambda x: model.predict_proba(x)[:, 1], background)
-        shap_values = explainer(x_scaled)
-        contributions = sorted(
-            zip(FEATURES, shap_values.values[0]),
-            key=lambda x: abs(x[1]),
-            reverse=True
-        )[:5]
+        explainer = shap.KernelExplainer(lambda x: model.predict_proba(x)[:, 1], shap.kmeans(x_scaled, 1))
+        shap_values = explainer.shap_values(x_scaled)
+        contributions = list(zip(FEATURES, shap_values[0]))
+        top_features = sorted(contributions, key=lambda x: abs(x[1]), reverse=True)[:5]
     except Exception as e:
-        contributions = [("Explainability Error", str(e))]
+        top_features = [("Explainability Error", str(e))]
 
     display_vals = {k: incoming[k] for k in FEATURES}
     label = "🚨 Virtual Machine Under Attack" if y_pred else "✅ Virtual Machine Normal"
 
-return render_template(
-    "index.html",
-    values=display_vals,
-    prediction=f"{label} (Prob={proba:.4f})",
-    top_features=top_features  # ← THIS MUST BE INCLUDED
-)
+    # 🔽 THIS IS THE CORRECT LOCATION FOR return
+    return render_template(
+        "index.html",
+        values=display_vals,
+        prediction=f"{label} (Prob={proba:.4f})",
+        top_features=top_features  # ← Correctly included
+    )
 
 # ────────────────────────────
 # Entry‑point
