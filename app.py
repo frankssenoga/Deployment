@@ -64,13 +64,14 @@ def predict():
     # ────────────────────────────
     # SHAP explainability using shap.Explainer
     # ────────────────────────────
-    try:
-        explainer = shap.Explainer(model.predict_proba, masker="auto")  # auto-detect
+  try:
+        explainer = shap.Explainer(model.predict_proba, masker="auto")
         shap_values = explainer(x_scaled)
         feature_contributions = shap_values.values[0, :, 1]  # Class 1 (attack)
         contributions = list(zip(FEATURES, feature_contributions))
         top_features = sorted(contributions, key=lambda x: abs(x[1]), reverse=True)[:5]
     except Exception as e:
+        print("❌ SHAP error:", str(e))  # Log the actual error in the console
         top_features = [("Explainability Error", str(e))]
 
     display_vals = {k: incoming[k] for k in FEATURES}
