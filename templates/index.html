@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Virtual Machine Instance Attack Predictor</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
 
@@ -68,14 +67,7 @@ input {
     display:flex; justify-content:center;
     gap:2cm; margin-top:50px; width:100%;
   }
-
-  #featureChart {
-    margin-top: 30px;
-    background: #1a1a1a;
-    border-radius: 8px;
-    padding: 15px;
-  }
-  </style>
+</style>
 
 <body>
 
@@ -147,9 +139,7 @@ input {
     {% if prediction %}
      <h3 style="text-align:center; color: rebeccapurple;">Prediction: {{ prediction }}</h3>
     {% endif %}
-
-  <canvas id="featureChart" width="900" height="600"></canvas>
-</div>
+  </div>
 
 <script>
   // --- format with "000" (thousands) separators on the fly ------------
@@ -176,8 +166,7 @@ input {
   function clearForm () {
     document.querySelectorAll('#predict-form input').forEach(i => i.value = '');
   }
-
- </script>
+</script>
 
 </body>
-</html>
+</html>"
