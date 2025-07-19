@@ -96,12 +96,12 @@ def predict():
     display_vals = {k: incoming[k] for k in FEATURES}
     label = "🚨 Virtual Machine Under Attack" if y_pred else "✅ Virtual Machine Normal"
 
-    return render_template(
-        "index.html",
-        values=display_vals,
-        prediction=f"{label} (Prob={proba:.4f})",
-        contributions=contributions
-    )
+return render_template(
+    "index.html",
+    values=display_vals,
+    prediction=f"{label} (Prob={proba:.4f})",
+    top_features=top_features  # ← THIS MUST BE INCLUDED
+)
 
 # ────────────────────────────
 # Entry‑point
