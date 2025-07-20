@@ -89,7 +89,7 @@ def predict():
         lime_exp = explainer.explain_instance(
             np.array(vals),
             predict_fn,
-            num_features=5
+            num_features=7
         )
 
         top_features = lime_exp.as_list()
