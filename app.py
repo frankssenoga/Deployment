@@ -5,6 +5,8 @@ from flask import Flask, request, render_template, jsonify, abort
 import joblib
 import numpy as np
 
+from lime.lime_tabular import LimeTabularExplainer
+
 app = Flask(__name__)
 
 # ────────────────────────────
@@ -27,9 +29,20 @@ FEATURES = [
 ]
 
 # ────────────────────────────
-# Helper: robust numeric cleaner
+# Initialize LIME Explainer
 # ────────────────────────────
-num_re = re.compile(r"[^\d\-.]")       # keep 0‑9, dot, minus
+explainer = LimeTabularExplainer(
+    training_data=np.zeros((1, len(FEATURES))),  # dummy shape
+    feature_names=FEATURES,
+    class_names=["Normal", "Attack"],
+    mode="classification",
+    discretize_continuous=True
+)
+
+# ────────────────────────────
+# Helper: clean and convert values
+# ────────────────────────────
+num_re = re.compile(r"[^\d\-.]")
 def to_float(raw: str) -> float:
     cleaned = num_re.sub("", raw or "")
     if cleaned in ("", "-", ".", "-."):
@@ -41,31 +54,17 @@ def to_float(raw: str) -> float:
 # ────────────────────────────
 @app.route("/", methods=["GET"])
 def home():
-    # blank defaults so the form loads empty
     empty_vals = {f: "" for f in FEATURES}
     return render_template("index.html", values=empty_vals, prediction=None)
 
-
 @app.route("/predict", methods=["POST"])
 def predict():
-    """
-    Accepts:
-      • a browser form (application/x-www-form-urlencoded)
-      • or JSON: {"rxbytes_rate": 123, ...}
-    Returns:
-      • HTML (if form)   — renders index.html with prediction
-      • JSON (if JSON)   — {"prediction": 1, "probability": 0.987}
-    """
-    # decide if JSON or form
     is_json = request.is_json
-
     incoming = request.get_json(force=True) if is_json else request.form
 
-    # make sure all features are present
     if not all(k in incoming for k in FEATURES):
         abort(400, description="Missing one or more required features.")
 
-    # convert to float list in correct order
     try:
         vals = [to_float(incoming[k]) for k in FEATURES]
     except ValueError as err:
@@ -75,23 +74,40 @@ def predict():
     proba    = model.predict_proba(x_scaled)[0][1]
     y_pred   = int(proba >= 0.5)
 
-    if is_json:   # return JSON
+    if is_json:
         return jsonify({
             "prediction": y_pred,
             "probability": round(float(proba), 6)
         })
 
-    # else render HTML
+    # LIME Explainability Block
+    try:
+        # Define prediction function for LIME
+        def predict_fn(x):
+            return model.predict_proba(scaler.transform(x))
+
+        lime_exp = explainer.explain_instance(
+            np.array(vals),
+            predict_fn,
+            num_features=5
+        )
+
+        top_features = lime_exp.as_list()
+
+    except Exception as e:
+        top_features = [("Explainability Error", 0.0)]
+
     display_vals = {k: incoming[k] for k in FEATURES}
     label = "🚨 Virtual Machine Under Attack" if y_pred else "✅ Virtual Machine Normal"
     return render_template(
         "index.html",
         values=display_vals,
-        prediction=f"{label} (Prob={proba:.4f})"
+        prediction=f"{label} (Prob={proba:.4f})",
+        top_features=top_features
     )
 
 # ────────────────────────────
-# Entry‑point
+# Entrypoint
 # ────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
