@@ -82,7 +82,7 @@ def predict():
         explanation = explainer.explain_instance(
             np.array(vals), 
             lambda x: model.predict_proba(scaler.transform(x)), 
-            num_features=5
+            num_features=10
         )
         top_features = explanation.as_list()
     except Exception as e:
