@@ -4,134 +4,169 @@
   <title>Virtual Machine Instance Attack Predictor</title>
 
   <style>
-  body {
+
+  body  {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 2rem;
     display: flex;
-    justify-content: center;
+    justify-content: center;   /* center horizontally */
   }
 
-  form {
-    margin-left: 80px;
-    margin-right: 80px;
-  }
+      form {
+      margin-left: 80px;    /* Add equal margin on left */
+      margin-right: 80px;   /* Add equal margin on right */
+    }
 
+
+  /* ── dark card with thicker border ─────────────────────────── */
   .form-container {
     width: 800px;
-    background-color: #060606;
-    color: #f0f0f0;
+    background-color: #060606;       /* purely dark / dark background   */
+    color: #f0f0f0;                  /* light text for contrast      */
     padding: 30px;
-    border: 6px solid #444;
+    border: 6px solid #444;          /* thicker 4‑px border line     */
     border-radius: 12px;
     box-shadow: 0 0 15px rgba(0,0,0,0.4);
   }
 
-  h2 {
+    h2 {
     text-align: center;
-    font-size: 37px;
-    color: #219077;
+    font-size: 37px; /* ← here */
+      color: #219077;
   }
 
-  input {
-    width: 222px;
-    padding: 2px 5px;
-    font-size: 14px;
-    margin-left: 26px;
-    background: #2a2a2a;
-    color: #fff;
-    border: 1px solid #666;
-  }
-
+input {
+  width: 222px;
+  padding: 2px 5px;
+  font-size: 14px;
+  margin-left: 26px;      /* ← new: 12‑px gap between label & box */
+}
   label {
-    display: inline-block;
-    width: 320px;
-    font-size: 14px;
-    white-space: nowrap;
-    color: #f0f0f0;
+    display:inline-block; width:320px; font-size:14px;
+    white-space:nowrap; color:#f0f0f0;
+  }
+  input {
+    width:220px; padding:2px 4px; font-size:14px;
+    background:#2a2a2a; color:#fff; border:1px solid #666;
   }
 
   .btn {
-    padding: 15px 45px;
-    font-size: 22px;
-    border: 2px solid #68a0ff;
-    border-radius: 8px;
-    background: #333;
-    color: #e0e0e0;
-    cursor: pointer;
-    min-width: 160px;
+    padding:15px 45px; font-size:22px;
+    border:2px solid #68a0ff;
+    border-radius:8px;
+    background:#333;
+    color:#e0e0e0;
+    cursor:pointer;
+    min-width:160px;
   }
-
-  .btn:hover  { background: #3b3b3b; }
-  .btn:active { background: #444; }
+  .btn:hover  { background:#3b3b3b; }
+  .btn:active { background:#444; }
 
   .btn-row {
-    display: flex;
-    justify-content: center;
-    gap: 2cm;
-    margin-top: 50px;
-    width: 100%;
+    display:flex; justify-content:center;
+    gap:2cm; margin-top:50px; width:100%;
   }
-  </style>
-</head>
+</style>
 
 <body>
+
 <div class="form-container">
-  <div style="text-align: center;">
-    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Logo" class="logo">
+    <div style="text-align: center;">
+      <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Logo" class="logo">
+    </div>
+    <h2>VM-Instance Security Prediction Tool</h2>
+
+    <form id="predict-form" method="POST" action="/predict">
+
+      <label for="rxbytes_rate">Number of bytes received on the Network (bytes/sec):</label>
+      <input type="text" name="rxbytes_rate" value="{{ values.rxbytes_rate }}" required><br><br>
+
+      <label for="txbytes_rate">Number of bytes transmitted on the Network (bytes/sec):</label>
+      <input type="text" name="txbytes_rate" value="{{ values.txbytes_rate }}" required><br><br>
+
+      <label for="timecpu">Time spent by the vCPU executing the guest code (ns):</label>
+      <input type="text" name="timecpu" value="{{ values.timecpu }}" required><br><br>
+
+      <label for="timesys">Time spent by the vCPU in kernel space (ns):</label>
+      <input type="text" name="timesys" value="{{ values.timesys }}" required><br><br>
+
+      <label for="timeusr">Time spent by the vCPU in user space (ns):</label>
+      <input type="text" name="timeusr" value="{{ values.timeusr }}" required><br><br>
+
+      <label for="state">Current State of the Virtual Machine:</label>
+      <input type="text" name="state" value="{{ values.state }}" required><br><br>
+
+      <label for="cputime">Time spent by the host CPU (ns):</label>
+      <input type="text" name="cputime" value="{{ values.cputime }}" required><br><br>
+
+      <label for="memminor_fault">Number of page faults (pf/sec):</label>
+      <input type="text" name="memminor_fault" value="{{ values.memminor_fault }}" required><br><br>
+
+      <label for="memunused">Memory left unused by the system (KB):</label>
+      <input type="text" name="memunused" value="{{ values.memunused }}" required><br><br>
+
+      <label for="memlast_update">Timestamp of last memory update (ms):</label>
+      <input type="text" name="memlast_update" value="{{ values.memlast_update }}" required><br><br>
+
+      <label for="memrss">Resident memory of running processes (KB):</label>
+      <input type="text" name="memrss" value="{{ values.memrss }}" required><br><br>
+
+      <label for="vdard_req_rate">Read requests sent to the vhard drive (bytes/sec):</label>
+      <input type="text" name="vdard_req_rate" value="{{ values.vdard_req_rate }}" required><br><br>
+
+      <label for="vdard_bytes_rate">Bytes read from the vhard drive (bytes/sec):</label>
+      <input type="text" name="vdard_bytes_rate" value="{{ values.vdard_bytes_rate }}" required><br><br>
+
+      <label for="vdawr_reqs_rate">Write requests sent to the vhard drive (bytes/sec):</label>
+      <input type="text" name="vdawr_reqs_rate" value="{{ values.vdawr_reqs_rate }}" required><br><br>
+
+      <label for="vdawr_bytes_rate">Bytes written to the vhard drive (bytes/sec):</label>
+      <input type="text" name="vdawr_bytes_rate" value="{{ values.vdawr_bytes_rate }}" required><br><br>
+
+      <label for="hdard_req_rate">Read requests sent to the host hard drive (bytes/sec):</label>
+      <input type="text" name="hdard_req_rate" value="{{ values.hdard_req_rate }}" required><br><br>
+
+      <label for="hdard_bytes_rate">Bytes read from the host hard drive (bytes/sec):</label>
+      <input type="text" name="hdard_bytes_rate" value="{{ values.hdard_bytes_rate }}" required><br><br>
+
+      <div class="btn-row">
+        <button class="btn" type="submit">Predict</button>
+        <button class="btn" type="button" onclick="clearForm()">Clear</button>
+      </div>
+    </form>
+
+    {% if prediction %}
+     <h3 style="text-align:center; color: rebeccapurple;">Prediction: {{ prediction }}</h3>
+    {% endif %}
   </div>
-  <h2>VM-Instance Security Prediction Tool</h2>
-
-  <form id="predict-form" method="POST" action="/predict">
-    {% for field in [
-      'rxbytes_rate', 'txbytes_rate', 'timecpu', 'timesys', 'timeusr', 'state',
-      'cputime', 'memminor_fault', 'memunused', 'memlast_update', 'memrss',
-      'vdard_req_rate', 'vdard_bytes_rate', 'vdawr_reqs_rate', 'vdawr_bytes_rate',
-      'hdard_req_rate', 'hdard_bytes_rate'
-    ] %}
-      <label for="{{ field }}">{{ field.replace('_', ' ').title() }}:</label>
-      <input type="text" name="{{ field }}" value="{{ values[field] }}" required><br><br>
-    {% endfor %}
-
-    <div class="btn-row">
-      <button class="btn" type="submit">Predict</button>
-      <button class="btn" type="button" onclick="clearForm()">Clear</button>
-    </div>
-  </form>
-
-  {% if prediction %}
-    <h3 style="text-align:center; color: rebeccapurple;">Prediction: {{ prediction }}</h3>
-  {% endif %}
-
-  {% if top_features %}
-    <div style="margin-top: 30px; padding: 20px; background-color: #1a1a1a; border-left: 6px solid #219077; color: #e0e0e0; border-radius: 10px;">
-      <h3 style="text-align: center; color: #4cd2a6;">Top Contributing Features (LIME)</h3>
-      <ul style="font-size: 16px; line-height: 1.6;">
-        {% for feature, weight in top_features %}
-          <li><strong>{{ feature }}</strong>: {{ "%.4f"|format(weight) }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-  {% endif %}
-</div>
 
 <script>
-function addCommas(e) {
-  const el = e.target;
-  if (!el.value) return;
-  const clean = el.value.replace(/,/g, '');
-  if (isNaN(clean)) return;
-  const parts = clean.split('.');
-  parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
-  el.value = parts.join('.');
-}
+  // --- format with "000" (thousands) separators on the fly ------------
+  function addCommas(e) {
+    const el = e.target;
+    // Skip if field is empty
+    if (!el.value) return;
 
-document.querySelectorAll('#predict-form input')
-        .forEach(inp => inp.addEventListener('input', addCommas));
+    // Preserve minus sign & decimals if any, but remove old commas
+    const clean = el.value.replace(/,/g, '');
+    if (isNaN(clean)) return;  // ignore if not numeric
 
-function clearForm() {
-  document.querySelectorAll('#predict-form input').forEach(i => i.value = '');
-}
+    // Re‑format with commas
+    const parts = clean.split('.');
+    parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
+    el.value = parts.join('.');
+  }
+
+  // Attach to every input
+  document.querySelectorAll('#predict-form input')
+          .forEach(inp => inp.addEventListener('input', addCommas));
+
+  // Clear helper
+  function clearForm () {
+    document.querySelectorAll('#predict-form input').forEach(i => i.value = '');
+  }
 </script>
+
 </body>
-</html>
+</html>"
