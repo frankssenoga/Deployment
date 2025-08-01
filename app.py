@@ -83,7 +83,7 @@ def predict():
 
     # else render HTML
     display_vals = {k: incoming[k] for k in FEATURES}
-    label = "🚨 Virtual Machine Under Attack" if y_pred else "✅ Virtual Machine Normal"
+    label = f"{'🚨 Virtual Machine Under Attack' if y_pred else '✅ Virtual Machine Normal'} ({proba:.1%})"
     return render_template(
         "index.html",
         values=display_vals,
